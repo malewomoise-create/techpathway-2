@@ -2,34 +2,22 @@ pipeline {
     agent any
 
     stages {
-
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Verify Docker') {
+        stage('Verify Workspace') {
             steps {
-                sh 'docker --version'
+                sh 'pwd'
+                sh 'ls -la'
             }
         }
 
-        stage('Build Backend Image') {
+        stage('Verify Git') {
             steps {
-                sh 'docker build -t techpathway-backend:v1 ./backend'
-            }
-        }
-
-        stage('Build Frontend Image') {
-            steps {
-                sh 'docker build -t techpathway-frontend:v1 ./frontend'
-            }
-        }
-
-        stage('List Docker Images') {
-            steps {
-                sh 'docker images'
+                sh 'git --version'
             }
         }
     }
