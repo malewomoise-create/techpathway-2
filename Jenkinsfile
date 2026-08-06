@@ -2,8 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub')
-        DOCKER_USER = 'moeprofit95'
+        DOCKERHUB_USERNAME = 'moeprofit95'
     }
 
     stages {
@@ -14,13 +13,13 @@ pipeline {
             }
         }
 
-        stage('Build Backend Image') {
+        stage('Build Backend') {
             steps {
                 sh 'docker build -t techpathway-backend:v2 ./backend'
             }
         }
 
-        stage('Build Frontend Image') {
+        stage('Build Frontend') {
             steps {
                 sh 'docker build -t techpathway-frontend:v2 ./frontend'
             }
@@ -28,39 +27,52 @@ pipeline {
 
         stage('Docker Login') {
             steps {
-                sh '''
-                echo "$DOCKERHUB_CREDENTIALS_PSW" | docker login \
-                -u "$DOCKERHUB_CREDENTIALS_USR" \
-                --password-stdin
-                '''
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    '''
+                }
             }
         }
 
         stage('Tag Images') {
             steps {
                 sh '''
-                docker tag techpathway-backend:v2 $DOCKER_USER/techpathway-backend:latest
-                docker tag techpathway-frontend:v2 $DOCKER_USER/techpathway-frontend:latest
+                docker tag techpathway-backend:v2 $DOCKERHUB_USERNAME/techpathway-backend:latest
+                docker tag techpathway-frontend:v2 $DOCKERHUB_USERNAME/techpathway-frontend:latest
                 '''
             }
         }
 
         stage('Push Backend') {
             steps {
-                sh 'docker push $DOCKER_USER/techpathway-backend:latest'
+                sh 'docker push $DOCKERHUB_USERNAME/techpathway-backend:latest'
             }
         }
 
         stage('Push Frontend') {
             steps {
-                sh 'docker push $DOCKER_USER/techpathway-frontend:latest'
+                sh 'docker push $DOCKERHUB_USERNAME/techpathway-frontend:latest'
             }
         }
 
-        stage('List Images') {
+        stage('Deploy to EC2') {
             steps {
-                sh 'docker images'
+                sshagent(credentials: ['ec2-key']) {
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no ubuntu@18.209.13.109 << EOF
+                    cd ~/techpathway-2
+                    sudo docker compose pull
+                    sudo docker compose up -d
+                    EOF
+                    '''
+                }
             }
         }
+
     }
 }
