@@ -15,13 +15,25 @@ pipeline {
 
         stage('Build Backend') {
             steps {
-                sh 'docker build -t techpathway-backend:v2 ./backend'
+                sh '''
+                docker buildx build \
+                  --platform linux/amd64 \
+                  -t techpathway-backend:v2 \
+                  ./backend \
+                  --load
+                '''
             }
         }
 
         stage('Build Frontend') {
             steps {
-                sh 'docker build -t techpathway-frontend:v2 ./frontend'
+                sh '''
+                docker buildx build \
+                  --platform linux/amd64 \
+                  -t techpathway-frontend:v2 \
+                  ./frontend \
+                  --load
+                '''
             }
         }
 
@@ -50,25 +62,43 @@ pipeline {
 
         stage('Push Backend') {
             steps {
-                sh 'docker push $DOCKERHUB_USERNAME/techpathway-backend:latest'
+                sh '''
+                docker push $DOCKERHUB_USERNAME/techpathway-backend:latest
+                '''
             }
         }
 
         stage('Push Frontend') {
             steps {
-                sh 'docker push $DOCKERHUB_USERNAME/techpathway-frontend:latest'
+                sh '''
+                docker push $DOCKERHUB_USERNAME/techpathway-frontend:latest
+                '''
             }
         }
 
-       stage('Deploy to EC2') {
-    steps {
-        sshagent(credentials: ['ec2-key']) {
-            sh '''
-                ssh -o StrictHostKeyChecking=no ubuntu@18.209.13.109 \
-                "cd ~/techpathway-2 && \
-                sudo docker compose pull && \
-                sudo docker compose up -d"
-            '''
+        stage('Deploy to EC2') {
+            steps {
+                sshagent(credentials: ['ec2-key']) {
+                    sh '''
+ssh -o StrictHostKeyChecking=no ubuntu@18.209.13.109 "
+cd ~/techpathway-2
+sudo docker compose pull
+sudo docker compose up -d
+sudo docker ps
+"
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+
+        failure {
+            echo 'Pipeline failed.'
         }
     }
 }
