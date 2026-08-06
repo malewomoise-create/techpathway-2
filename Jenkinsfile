@@ -60,19 +60,15 @@ pipeline {
             }
         }
 
-        stage('Deploy to EC2') {
-            steps {
-                sshagent(credentials: ['ec2-key']) {
-                    sh '''
-                    ssh -o StrictHostKeyChecking=no ubuntu@18.209.13.109 << EOF
-                    cd ~/techpathway-2
-                    sudo docker compose pull
-                    sudo docker compose up -d
-                    EOF
-                    '''
-                }
-            }
+       stage('Deploy to EC2') {
+    steps {
+        sshagent(credentials: ['ec2-key']) {
+            sh '''
+                ssh -o StrictHostKeyChecking=no ubuntu@18.209.13.109 \
+                "cd ~/techpathway-2 && \
+                sudo docker compose pull && \
+                sudo docker compose up -d"
+            '''
         }
-
     }
 }
